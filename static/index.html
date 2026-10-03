@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Analysis API</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .section {
+            margin-bottom: 20px;
+        }
+
+        .section label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .section input[type="file"],
+        .section select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .section input[type="file"]:hover,
+        .section select:hover {
+            border-color: #667eea;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            width: 100%;
+        }
+
+        button:hover {
+            background: #764ba2;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+
+        .result {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .result-item {
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            font-weight: 600;
+            color: #667eea;
+            margin-right: 8px;
+        }
+
+        .match-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .match-badge.yes {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .match-badge.no {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .progress {
+            display: none;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .similarity-bar {
+            background: #ddd;
+            height: 30px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .similarity-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            transition: width 0.3s;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+            color: #004085;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #667eea;
+            color: white;
+            border-radius: 4px;
+            font-size: 0.85em;
+            margin-right: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎙️ Audio Analysis API</h1>
+            <p>YAMNet + Spektral-Vergleich | REST API Frontend</p>
+        </header>
+
+        <div class="grid">
+            <!-- HEALTH CHECK & CONFIG -->
+            <div class="card">
+                <h2>📊 Status & Konfiguration</h2>
+
+                <button onclick="checkHealth()" style="margin-bottom: 10px;">Health Check</button>
+                <div id="healthStatus"></div>
+
+                <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
+
+                <button onclick="getConfig()">Konfiguration laden</button>
+                <div id="configResult" class="result"></div>
+            </div>
+
+            <!-- TEMPLATE MANAGEMENT -->
+            <div class="card">
+                <h2>📁 Vorlage verwalten</h2>
+
+                <div class="section">
+                    <label>Neue Vorlage hochladen:</label>
+                    <input type="file" id="templateFile" accept="audio/*">
+                </div>
+
+                <button onclick="uploadTemplate()">Vorlage hochladen</button>
+                <div id="templateStatus"></div>
+
+                <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
+
+                <button onclick="getTemplateStatus()">Vorlage-Status</button>
+                <div id="templateStatusResult" class="result"></div>
+            </div>
+
+            <!-- SIMPLE COMPARE -->
+            <div class="card">
+                <h2>🔄 Audio vergleichen</h2>
+
+                <div class="section">
+                    <label>Audio-Datei:</label>
+                    <input type="file" id="compareFile" accept="audio/*">
+                </div>
+
+                <div class="section">
+                    <label>Methode:</label>
+                    <select id="compareMethod">
+                        <option value="dtw">DTW (Option B - Spektral, flexibel)</option>
+                        <option value="cosine">Cosine (Option B - Spektral, schnell)</option>
+                        <option value="embedding">Embedding (Option C - Semantisch, sehr schnell)</option>
+                    </select>
+                </div>
+
+                <button onclick="compareAudio()">Vergleichen</button>
+                <div id="compareStatus"></div>
+                <div id="compareResult" class="result"></div>
+            </div>
+
+            <!-- HYBRID ANALYZE -->
+            <div class="card">
+                <h2>🔬 Hybrid-Analyse</h2>
+
+                <div class="info-box">
+                    <strong>YAMNet + Spektral</strong><br>
+                    Kombinierte Analyse: Klassifikation + Vergleich
+                </div>
+
+                <div class="section">
+                    <label>Audio-Datei:</label>
+                    <input type="file" id="analyzeFile" accept="audio/*">
+                </div>
+
+                <button onclick="analyzeAudio()">Analysieren</button>
+                <div id="analyzeStatus"></div>
+                <div id="analyzeResult" class="result"></div>
+            </div>
+
+            <!-- BATCH COMPARE -->
+            <div class="card">
+                <h2>📦 Batch-Vergleich</h2>
+
+                <div class="section">
+                    <label>Mehrere Dateien (bis 10):</label>
+                    <input type="file" id="batchFiles" accept="audio/*" multiple>
+                </div>
+
+                <button onclick="batchCompare()">Batch vergleichen</button>
+                <div id="batchStatus"></div>
+                <div id="batchResult" class="result"></div>
+            </div>
+
+            <!-- DOCUMENTATION -->
+            <div class="card">
+                <h2>📚 Dokumentation</h2>
+                <div class="info-box">
+                    <p><strong>API Endpoints:</strong></p>
+                    <ul style="margin-left: 15px; margin-top: 10px;">
+                        <li><code>/health</code> - Server-Status</li>
+                        <li><code>/compare</code> - Audio vergleichen</li>
+                        <li><code>/analyze</code> - Hybrid-Analyse</li>
+                        <li><code>/batch_compare</code> - Mehrere Dateien</li>
+                        <li><code>/docs</code> - Swagger UI</li>
+                    </ul>
+                    <p style="margin-top: 15px;">
+                        <strong>Vorlage:</strong> Muss zuerst mit Upload-Template hochgeladen werden
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:8000";
+
+        function showStatus(elementId, message, type = "info") {
+            const el = document.getElementById(elementId);
+            el.className = `status ${type}`;
+            el.textContent = message;
+            setTimeout(() => { el.className = "status"; }, 5000);
+        }
+
+        function showProgress(elementId) {
+            const el = document.getElementById(elementId);
+            el.innerHTML = '<div class="progress"><div class="spinner"></div> Verarbeite...</div>';
+        }
+
+        function hideProgress(elementId) {
+            const el = document.getElementById(elementId);
+            const progress = el.querySelector(".progress");
+            if (progress) progress.remove();
+        }
+
+        async function checkHealth() {
+            showProgress("healthStatus");
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const data = await response.json();
+                hideProgress("healthStatus");
+                showStatus("healthStatus", `✓ Server: ${data.status} | Template: ${data.template_loaded ? "✓ Geladen" : "✗ Fehlt"}`, "success");
+            } catch (error) {
+                hideProgress("healthStatus");
+                showStatus("healthStatus", `✗ Fehler: ${error.message}`, "error");
+            }
+        }
+
+        async function getConfig() {
+            try {
+                const response = await fetch(`${API_URL}/config`);
+                const data = await response.json();
+
+                const html = `
+                    <div class="result show">
+                        <div class="result-item"><span class="result-label">Schwelle:</span> ${(data.similarity_threshold * 100).toFixed(0)}%</div>
+                        <div class="result-item"><span class="result-label">Mel-Bins:</span> ${data.mel_bins}</div>
+                        <div class="result-item"><span class="result-label">Sample-Rate:</span> ${data.sample_rate} Hz</div>
+                        <div class="result-item"><span class="result-label">Methoden:</span> ${data.methods_available.join(", ")}</div>
+                    </div>
+                `;
+                document.getElementById("configResult").innerHTML = html;
+            } catch (error) {
+                showStatus("configResult", `✗ Fehler: ${error.message}`, "error");
+            }
+        }
+
+        async function uploadTemplate() {
+            const file = document.getElementById("templateFile").files[0];
+            if (!file) {
+                showStatus("templateStatus", "✗ Bitte Datei auswählen", "error");
+                return;
+            }
+
+            showProgress("templateStatus");
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                const response = await fetch(`${API_URL}/upload_template`, {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await response.json();
+                hideProgress("templateStatus");
+                showStatus("templateStatus", `✓ Vorlage hochgeladen: ${data.template.filename}`, "success");
+            } catch (error) {
+                hideProgress("templateStatus");
+                showStatus("templateStatus", `✗ Fehler: ${error.message}`, "error");
+            }
+        }
+
+        async function getTemplateStatus() {
+            try {
+                const response = await fetch(`${API_URL}/template_status`);
+                const data = await response.json();
+
+                const html = `
+                    <div class="result show">
+                        <div class="result-item"><span class="result-label">Status:</span> ${data.template_loaded ? "✓ Geladen" : "✗ Fehlt"}</div>
+                        <div class="result-item"><span class="result-label">Datei:</span> ${data.filename || "-"}</div>
+                        <div class="result-item"><span class="result-label">Form:</span> ${data.shape ? data.shape.join(" x ") : "-"}</div>
+                    </div>
+                `;
+                document.getElementById("templateStatusResult").innerHTML = html;
+            } catch (error) {
+                showStatus("templateStatusResult", `✗ Fehler: ${error.message}`, "error");
+            }
+        }
+
+        async function compareAudio() {
+            const file = document.getElementById("compareFile").files[0];
+            if (!file) {
+                showStatus("compareStatus", "✗ Bitte Datei auswählen", "error");
+                return;
+            }
+
+            showProgress("compareStatus");
+            const formData = new FormData();
+            formData.append("file", file);
+            const method = document.getElementById("compareMethod").value;
+
+            try {
+                const response = await fetch(`${API_URL}/compare?method=${method}`, {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await response.json();
+                hideProgress("compareStatus");
+
+                if (data.success) {
+                    const similarity = (data.similarity * 100).toFixed(1);
+                    const matchBadge = data.match
+                        ? '<span class="match-badge yes">✓ MATCH</span>'
+                        : '<span class="match-badge no">✗ KEIN MATCH</span>';
+
+                    const html = `
+                        <div class="result show">
+                            <div class="result-item"><span class="result-label">Ähnlichkeit:</span> ${similarity}%</div>
+                            <div class="similarity-bar">
+                                <div class="similarity-fill" style="width: ${similarity}%;">${similarity}%</div>
+                            </div>
+                            <div class="result-item"><span class="result-label">Status:</span> ${matchBadge}</div>
+                            <div class="result-item"><span class="result-label">Schwelle:</span> ${(data.threshold * 100).toFixed(0)}%</div>
+                            <div class="result-item"><span class="result-label">Methode:</span> <span class="badge">${data.method.toUpperCase()}</span></div>
+                        </div>
+                    `;
+                    document.getElementById("compareResult").innerHTML = html;
+                    showStatus("compareStatus", "✓ Vergleich erfolgreich", "success");
+                } else {
+                    showStatus("compareStatus", `✗ ${data.detail}`, "error");
+                }
+            } catch (error) {
+                hideProgress("compareStatus");
+                showStatus("compareStatus", `✗ Fehler: ${error.message}`, "error");
+            }
+        }
+
+        async function analyzeAudio() {
+            const file = document.getElementById("analyzeFile").files[0];
+            if (!file) {
+                showStatus("analyzeStatus", "✗ Bitte Datei auswählen", "error");
+                return;
+            }
+
+            showProgress("analyzeStatus");
+            const formData = new FormData();
+            formData.append("file", file);
+
+            try {
+                const response = await fetch(`${API_URL}/analyze`, {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await response.json();
+                hideProgress("analyzeStatus");
+
+                if (data.success) {
+                    let html = '<div class="result show">';
+
+                    if (data.yamnet) {
+                        html += `
+                            <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #ddd;">
+                                <strong style="color: #667eea;">🎙️ YAMNet-Klassifikation</strong>
+                                <div class="result-item" style="margin-top: 10px;">
+                                    <span class="result-label">Klasse:</span> ${data.yamnet.class}
+                                </div>
+                                <div class="result-item">
+                                    <span class="result-label">Vertrauen:</span> ${(data.yamnet.confidence * 100).toFixed(1)}%
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    if (data.spektral) {
+                        const similarity = (data.spektral.similarity * 100).toFixed(1);
+                        const matchBadge = data.spektral.match
+                            ? '<span class="match-badge yes">✓ MATCH</span>'
+                            : '<span class="match-badge no">✗ KEIN MATCH</span>';
+
+                        html += `
+                            <div>
+                                <strong style="color: #667eea;">📊 Spektral-Vergleich</strong>
+                                <div class="result-item" style="margin-top: 10px;">
+                                    <span class="result-label">Ähnlichkeit:</span> ${similarity}%
+                                </div>
+                                <div class="similarity-bar">
+                                    <div class="similarity-fill" style="width: ${similarity}%;">${similarity}%</div>
+                                </div>
+                                <div class="result-item">
+                                    <span class="result-label">Status:</span> ${matchBadge}
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    html += '</div>';
+                    document.getElementById("analyzeResult").innerHTML = html;
+                    showStatus("analyzeStatus", "✓ Analyse erfolgreich", "success");
+                } else {
+                    showStatus("analyzeStatus", `✗ ${data.detail}`, "error");
+                }
+            } catch (error) {
+                hideProgress("analyzeStatus");
+                showStatus("analyzeStatus", `✗ Fehler: ${error.message}`, "error");
+            }
+        }
+
+        async function batchCompare() {
+            const files = document.getElementById("batchFiles").files;
+            if (files.length === 0) {
+                showStatus("batchStatus", "✗ Bitte Dateien auswählen", "error");
+                return;
+            }
+
+            showProgress("batchStatus");
+            const formData = new FormData();
+            for (let i = 0; i < Math.min(files.length, 10); i++) {
+                formData.append("files", files[i]);
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/batch_compare`, {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await response.json();
+                hideProgress("batchStatus");
+
+                if (data.success) {
+                    let html = `
+                        <div class="result show">
+                            <div class="result-item" style="font-weight: bold; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 2px solid #667eea;">
+                                ${data.summary}
+                            </div>
+                    `;
+
+                    data.results.forEach(r => {
+                        if (r.error) {
+                            html += `
+                                <div class="result-item">
+                                    <span class="result-label">${r.filename}:</span> ✗ Fehler
+                                </div>
+                            `;
+                        } else {
+                            const badge = r.match ? '<span class="match-badge yes">✓</span>' : '<span class="match-badge no">✗</span>';
+                            html += `
+                                <div class="result-item">
+                                    <span class="result-label">${r.filename}:</span>
+                                    ${(r.similarity * 100).toFixed(1)}% ${badge}
+                                </div>
+                            `;
+                        }
+                    });
+
+                    html += '</div>';
+                    document.getElementById("batchResult").innerHTML = html;
+                    showStatus("batchStatus", "✓ Batch-Vergleich erfolgreich", "success");
+                } else {
+                    showStatus("batchStatus", `✗ ${data.detail}`, "error");
+                }
+            } catch (error) {
+                hideProgress("batchStatus");
+                showStatus("batchStatus", `✗ Fehler: ${error.message}`, "error");
+            }
+        }
+
+        // Auto-check health on load
+        window.addEventListener("load", checkHealth);
+    </script>
+</body>
+</html>
